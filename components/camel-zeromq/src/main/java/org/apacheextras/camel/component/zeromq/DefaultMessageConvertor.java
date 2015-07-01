@@ -26,8 +26,8 @@ import org.apache.camel.Exchange;
 public class DefaultMessageConvertor implements MessageConverter {
 
     @Override
-    public byte[] convert(Exchange arg0) {
-        Object msg = arg0.getIn().getBody();
+    public byte[] convert(Exchange exchange) {
+        Object msg = (exchange.hasOut() ? exchange.getOut() : exchange.getIn()).getBody();
         if (msg instanceof String) {
             return ((String) msg).getBytes();
         } else if (msg instanceof byte[]) {

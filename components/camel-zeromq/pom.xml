@@ -46,8 +46,8 @@
       <artifactId>camel-core</artifactId>
     </dependency>
 
-    <!-- akka-zeromq -->
-    <dependency>
+    <!-- akka-zeromq doesn't work well: https://camel-extra.atlassian.net/browse/CAMEX-65 -->
+    <!--<dependency>
       <groupId>com.typesafe.akka</groupId>
       <artifactId>akka-zeromq_2.10</artifactId>
       <version>${akka-version}</version>
@@ -57,8 +57,19 @@
       <groupId>org.zeromq</groupId>
       <artifactId>zeromq-scala-binding_2.10</artifactId>
       <version>${zeromq-scala-binding-version}</version>
-    </dependency>
-    
+    </dependency>-->
+      <dependency>
+          <groupId>org.zeromq</groupId>
+          <artifactId>jzmq</artifactId>
+          <version>3.1.0</version>
+      </dependency>
+      <!--<dependency>
+          <groupId>org.zeromq</groupId>
+          <artifactId>jzmq</artifactId>
+          <version>3.1.0</version>
+          <classifier>native-amd64-Linux</classifier>
+      </dependency>-->
+
     <dependency>
       <groupId>org.apache.camel</groupId>
       <artifactId>camel-test</artifactId>

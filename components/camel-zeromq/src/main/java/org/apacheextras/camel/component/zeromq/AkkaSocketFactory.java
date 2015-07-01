@@ -33,6 +33,8 @@ public class AkkaSocketFactory implements SocketFactory {
 
     private final long highWaterMark;
     private final long linger;
+    private int consumerReceiveTimeOut = 1000; // ensure recv() can be shutdown anytime, 1 sec max
+    private int consumerSendTimeOut = 5000; // ensure reply's send() can be shutdown anytime, 5 sec max
 
     public AkkaSocketFactory(long highWaterMark, long linger) {
         this.highWaterMark = highWaterMark;
@@ -50,7 +52,8 @@ public class AkkaSocketFactory implements SocketFactory {
 
     @Override
     public Socket createConsumerSocket(Context context, ZeromqSocketType socketType) {
-        LOGGER.debug("Creating consumer socket [{}]", socketType);
+        LOGGER.debug("Creating consumer socket [{}] highWaterMark={} linger={} receiveTimeOut={} sendTimeOut={}",
+                new Object[] { socketType, highWaterMark, linger, consumerReceiveTimeOut, consumerSendTimeOut});
         Socket socket;
         switch (socketType) {
             default:
@@ -64,14 +67,20 @@ public class AkkaSocketFactory implements SocketFactory {
             case PULL:
                 socket = context.socket(ZMQ.PULL);
                 break;
+            case REP:
+                socket = context.socket(ZMQ.REP);
+                break;
         }
         applySocketOptions(socket);
+        socket.setReceiveTimeOut(consumerReceiveTimeOut);
+        socket.setSendTimeOut(consumerSendTimeOut);
         return socket;
     }
 
     @Override
     public Socket createProducerSocket(Context context, ZeromqSocketType socketType) {
-        LOGGER.debug("Creating producer socket [{}]", socketType);
+        LOGGER.debug("Creating producer socket [{}] highWaterMark={} linger={}",
+                new Object[] { socketType, highWaterMark, linger });
         Socket socket;
         switch (socketType) {
             case DEALER:
@@ -82,6 +91,9 @@ public class AkkaSocketFactory implements SocketFactory {
                 break;
             case PUSH:
                 socket = context.socket(ZMQ.PUSH);
+                break;
+            case REQ:
+                socket = context.socket(ZMQ.REQ);
                 break;
             default:
                 throw new ZeromqException("Unsupported socket type for producer: " + socketType);

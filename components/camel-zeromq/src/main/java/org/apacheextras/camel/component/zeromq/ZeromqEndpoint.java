@@ -25,15 +25,19 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.UUID;
 
-import org.apache.camel.Exchange;
-import org.apache.camel.Message;
-import org.apache.camel.Processor;
+import org.apache.camel.*;
 import org.apache.camel.impl.DefaultEndpoint;
 import org.apache.camel.impl.DefaultExchange;
 import org.apache.camel.impl.DefaultMessage;
 import org.apache.camel.spi.UriEndpoint;
 
 @UriEndpoint(scheme = "zeromq", syntax = "zeromq:(tcp|ipc)://hostname:port", consumerClass = ZeromqConsumer.class)
+/**
+ * Note: For {@link ZeromqSocketType#REQ}, a {@link ZeromqEndpoint} can only be used
+ * by one client at once (i.e. blocking).
+ * Same for {@link ZeromqSocketType#REP}, its {@link ZeromqEndpoint} can only process (and reply)
+ * one message at once (i.e. blocking).
+ */
 public class ZeromqEndpoint extends DefaultEndpoint {
 
     private static final String URI_ERROR = "Invalid URI. Format must be of the form zeromq:(tcp|icp)://hostname:port[?options...]";
@@ -188,6 +192,14 @@ public class ZeromqEndpoint extends DefaultEndpoint {
 
     public void setSocketType(ZeromqSocketType socketType) {
         this.socketType = socketType;
+        switch (socketType) {
+            case REQ:
+                setExchangePattern(ExchangePattern.InOut);
+                break;
+            case REP:
+                setExchangePattern(ExchangePattern.InOut);
+                break;
+        }
     }
 
     public void setTopics(String topics) {

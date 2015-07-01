@@ -21,7 +21,9 @@
  ***************************************************************************************/
 package org.apacheextras.camel.component.zeromq;
 
+import org.apache.camel.AsyncProcessor;
 import org.apache.camel.Exchange;
+import org.apache.camel.ExchangePattern;
 import org.apache.camel.impl.DefaultProducer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,22 +66,45 @@ public class ZeromqProducer extends DefaultProducer {
     }
 
     @Override
-    public void process(Exchange arg0) throws Exception {
-        byte[] body = messageConvertor.convert(arg0);
+    public void process(Exchange exchange) throws Exception {
+        byte[] body = messageConvertor.convert(exchange);
         if (topics == null) {
-            socket.send(body, 0);
+            if (!socket.send(body, 0)) {
+                throw new ZeromqException("ZMQ.Socket.send() reports error for " + endpoint.getSocketType() +
+                        " " + endpoint.getSocketAddress());
+            }
         } else {
             for (String topic : topics) {
                 byte[] t = topic.getBytes();
                 byte[] prefixed = new byte[t.length + body.length];
                 System.arraycopy(t, 0, prefixed, 0, t.length);
                 System.arraycopy(body, 0, prefixed, t.length, body.length);
-                socket.send(prefixed, 0);
+                if (!socket.send(prefixed, 0)) {
+                    throw new ZeromqException("ZMQ.Socket.send() reports error for " + endpoint.getSocketType() +
+                            " " + endpoint.getSocketAddress());
+                }
             }
         }
-        arg0.getIn().setHeader(ZeromqConstants.HEADER_TIMESTAMP, System.currentTimeMillis());
-        arg0.getIn().setHeader(ZeromqConstants.HEADER_SOURCE, endpoint.getSocketAddress());
-        arg0.getIn().setHeader(ZeromqConstants.HEADER_SOCKET_TYPE, endpoint.getSocketType());
+        exchange.getIn().setHeader(ZeromqConstants.HEADER_TIMESTAMP, System.currentTimeMillis());
+        exchange.getIn().setHeader(ZeromqConstants.HEADER_SOURCE, endpoint.getSocketAddress());
+        exchange.getIn().setHeader(ZeromqConstants.HEADER_SOCKET_TYPE, endpoint.getSocketType());
+
+        if (endpoint.getSocketType() == ZeromqSocketType.REQ) {
+            exchange.setPattern(ExchangePattern.InOut);
+            LOGGER.debug("Waiting reply {} {} for {}ms...",
+                    new Object[]{endpoint.getSocketAddress(), endpoint.getSocketType(), socket.getReceiveTimeOut()});
+            byte[] msg = socket.recv(0);
+            if (msg == null) {
+                throw new ZeromqException("ZMQ.Socket.recv() returned null for " + endpoint.getSocketType() +
+                        " " + endpoint.getSocketAddress());
+            }
+            LOGGER.trace("Received message [length={}]", msg.length);
+            exchange.getIn().setHeader(ZeromqConstants.HEADER_TIMESTAMP, System.currentTimeMillis());
+            exchange.getIn().setHeader(ZeromqConstants.HEADER_SOURCE, endpoint.getSocketAddress());
+            exchange.getIn().setHeader(ZeromqConstants.HEADER_SOCKET_TYPE, endpoint.getSocketType());
+            exchange.getIn().setBody(msg);
+            LOGGER.trace("Updated exchange from reply [exchange={}]", exchange);
+        }
     }
 
     public void setShutdownWait(int shutdownWait) {
@@ -90,13 +115,14 @@ public class ZeromqProducer extends DefaultProducer {
     public void start() throws Exception {
 
         this.context = contextFactory.createContext(1);
+        // TODO: For socketType REQ, socket should be created on-demand or pooled, to handle multiple requests at once
         this.socket = socketFactory.createProducerSocket(context, endpoint.getSocketType());
         this.topics = endpoint.getTopics() == null ? null : endpoint.getTopics().split(",");
 
         String addr = endpoint.getSocketAddress();
-        LOGGER.info("Binding client to [{}]", addr);
+        LOGGER.info("Binding client to [{}] {}", addr, endpoint.getSocketType());
         socket.bind(addr);
-        LOGGER.info("Client bound OK");
+        LOGGER.info("Client {} {} bound", addr, endpoint.getSocketType());
     }
 
     @Override
@@ -113,7 +139,8 @@ public class ZeromqProducer extends DefaultProducer {
             }
         });
         t.start();
-        LOGGER.debug("Waiting {}ms for producer socket to close", shutdownWait);
+        LOGGER.debug("Waiting {}ms for producer socket {} {} to close",
+                new Object[] { shutdownWait, endpoint.getSocketAddress(), endpoint.getSocketType() });
         t.join(shutdownWait);
         try {
             context.term();

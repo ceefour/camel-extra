@@ -46,8 +46,9 @@ public class ZeromqProducerTest {
     static class TestConvertor implements MessageConverter {
 
         @Override
-        public byte[] convert(Exchange arg0) {
-            return ("coldplay" + arg0.getIn().getBody().toString()).getBytes();
+        public byte[] convert(Exchange exchange) {
+            final Message msg = exchange.hasOut() ? exchange.getOut() : exchange.getIn();
+            return ("coldplay" + msg.getBody().toString()).getBytes();
         }
     }
 

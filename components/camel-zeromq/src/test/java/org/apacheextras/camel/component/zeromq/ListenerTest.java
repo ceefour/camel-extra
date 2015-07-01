@@ -75,7 +75,7 @@ public class ListenerTest {
     private AsyncProcessor asyncProcessor;
 
     @Test
-    public void asyncProcessorInvoked() throws InterruptedException {
+    public void asyncProcessorInvoked() throws InterruptedException, InstantiationException, IllegalAccessException {
         when(endpoint.getSocketType()).thenReturn(ZeromqSocketType.PULL);
         when(endpoint.isAsyncConsumer()).thenReturn(true);
         listener = new Listener(endpoint, asyncProcessor, akkaSocketFactory, akkaContextFactory);
@@ -90,7 +90,7 @@ public class ListenerTest {
     }
 
     @Before
-    public void before() {
+    public void before() throws InstantiationException, IllegalAccessException {
         initMocks(this);
 
         when(socket.recv(0)).then(new Answer<byte[]>() {
@@ -153,7 +153,7 @@ public class ListenerTest {
     }
 
     @Test
-    public void stopIgnoresNullContext() {
+    public void stopIgnoresNullContext() throws InterruptedException {
         listener.stop();
     }
 
