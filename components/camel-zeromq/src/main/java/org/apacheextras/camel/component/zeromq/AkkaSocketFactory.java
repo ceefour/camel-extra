@@ -35,6 +35,7 @@ public class AkkaSocketFactory implements SocketFactory {
     private final long linger;
     private int consumerReceiveTimeOut = 1000; // ensure recv() can be shutdown anytime, 1 sec max
     private int consumerSendTimeOut = 5000; // ensure reply's send() can be shutdown anytime, 5 sec max
+    private int producerReceiveTimeOut = 60000; // REQ waits for reply for long time, but not infinite
 
     public AkkaSocketFactory(long highWaterMark, long linger) {
         this.highWaterMark = highWaterMark;
@@ -99,6 +100,7 @@ public class AkkaSocketFactory implements SocketFactory {
                 throw new ZeromqException("Unsupported socket type for producer: " + socketType);
         }
         applySocketOptions(socket);
+        socket.setReceiveTimeOut(producerReceiveTimeOut);
         return socket;
     }
 

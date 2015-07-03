@@ -107,6 +107,8 @@ class Listener implements Runnable {
                                     throw new ZeromqException("ZMQ.Socket.send() reports error for " + endpoint.getSocketType() +
                                             " " + endpoint.getSocketAddress());
                                 }
+                                LOGGER.debug("Replied {} bytes {} {} (requestor should have received my reply)",
+                                        new Object[] { body.length, endpoint.getSocketAddress(), endpoint.getSocketType() });
                                 outMsg.setHeader(ZeromqConstants.HEADER_TIMESTAMP, System.currentTimeMillis());
                                 outMsg.setHeader(ZeromqConstants.HEADER_SOURCE, endpoint.getSocketAddress());
                                 outMsg.setHeader(ZeromqConstants.HEADER_SOCKET_TYPE, endpoint.getSocketType());

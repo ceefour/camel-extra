@@ -95,8 +95,8 @@ public class ZeromqProducer extends DefaultProducer {
                     new Object[]{endpoint.getSocketAddress(), endpoint.getSocketType(), socket.getReceiveTimeOut()});
             byte[] msg = socket.recv(0);
             if (msg == null) {
-                throw new ZeromqException("ZMQ.Socket.recv() returned null for " + endpoint.getSocketType() +
-                        " " + endpoint.getSocketAddress());
+                throw new ZeromqException("ZMQ.Socket.recv() timed out after " + socket.getReceiveTimeOut() +
+                        "ms, returned null for " + endpoint.getSocketType() + " " + endpoint.getSocketAddress());
             }
             LOGGER.trace("Received message [length={}]", msg.length);
             exchange.getIn().setHeader(ZeromqConstants.HEADER_TIMESTAMP, System.currentTimeMillis());
@@ -120,7 +120,8 @@ public class ZeromqProducer extends DefaultProducer {
         this.topics = endpoint.getTopics() == null ? null : endpoint.getTopics().split(",");
 
         String addr = endpoint.getSocketAddress();
-        LOGGER.info("Binding client to [{}] {}", addr, endpoint.getSocketType());
+        LOGGER.info("Binding client to [{}] {} receiveTimeOut={}",
+                new Object[] { addr, endpoint.getSocketType(), socket.getReceiveTimeOut() });
         socket.bind(addr);
         LOGGER.info("Client {} {} bound", addr, endpoint.getSocketType());
     }
