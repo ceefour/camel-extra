@@ -69,9 +69,18 @@ class Listener implements Runnable {
         socket = socketFactory.createConsumerSocket(context, endpoint.getSocketType());
         shutdownWait = Math.max(socket.getReceiveTimeOut(), socket.getSendTimeOut()) + 100;
 
-        String addr = endpoint.getSocketAddress();
-        LOGGER.info("Consuming from server [{}] {}", addr, endpoint.getSocketType());
-        socket.connect(addr);
+        final String addr = endpoint.getSocketAddress();
+        final boolean useBind = endpoint.getSocketType() == ZeromqSocketType.REP ||
+                endpoint.getSocketType() == ZeromqSocketType.SUBSCRIBE ||
+                endpoint.getSocketType() == ZeromqSocketType.PULL;
+        LOGGER.info("Consuming {} from server [{}] {}",
+                new Object[] { useBind ? "bind" : "connect", addr, endpoint.getSocketType() });
+        if (useBind) {
+            socket.bind(addr);
+        } else {
+            socket.connect(addr);
+        }
+
         LOGGER.info("Consumer {} {} connected", addr, endpoint.getSocketType());
 
         if (endpoint.getSocketType() == ZeromqSocketType.SUBSCRIBE) {
